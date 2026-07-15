@@ -19,11 +19,4 @@ FROM caddy:2-alpine AS production
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv
 
-CMD [
-  "caddy",
-  "run",
-  "--config",
-  "/etc/caddy/Caddyfile",
-  "--adapter",
-  "caddyfile"
-]
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
