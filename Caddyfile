@@ -3,7 +3,7 @@
     admin off
 }
 
-:{$PORT:5173} {
+:{$PORT:8080} {
     root * /srv
 
     encode zstd gzip

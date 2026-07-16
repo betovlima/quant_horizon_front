@@ -23,6 +23,10 @@ RUN npm run build
 
 FROM caddy:2-alpine AS production
 
+ENV PORT=8080
+
+EXPOSE 8080
+
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv
 
