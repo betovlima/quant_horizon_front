@@ -1,0 +1,220 @@
+{
+  "language": {
+    "selector": "Language selector",
+    "english": "English",
+    "portuguese": "Portuguese"
+  },
+  "app": {
+    "subtitle": "Market forecasts and backtests",
+    "readOnly": "No orders are sent",
+    "assetResearch": "Asset research"
+  },
+  "sidebar": {
+    "titles": {
+      "signals": "Plan each session",
+      "analysis": "Review day by day",
+      "backtest": "Measure the strategy"
+    },
+    "copies": {
+      "signals": "One forecast per day, always based on the previous close.",
+      "analysis": "Compare the past and project the future without skipping sessions.",
+      "backtest": "Simulate capital and trades without using future information."
+    }
+  },
+  "form": {
+    "question": "What do you want to analyze?",
+    "analysisType": "Analysis type",
+    "modes": {
+      "signals": "Upcoming signals",
+      "analysis": "Session analysis",
+      "backtest": "Financial backtest"
+    },
+    "ticker": "Asset (ticker)",
+    "model": "Analysis model",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "analysisHorizon": "Result after how many sessions?",
+    "initialCapital": "Initial capital",
+    "backtestHorizon": "Horizon (trading sessions)",
+    "help": {
+      "signals": "Future sessions receive preliminary forecasts and are recalculated after each new close.",
+      "analysis": "The past shows one signal per session. The future uses the latest available close and remains pending.",
+      "backtest": "The model is retrained periodically and reinvests all capital after each non-overlapping trade."
+    },
+    "apiConnection": "API connection",
+    "apiAddress": "API address",
+    "apiKey": "API key (optional)",
+    "analyzing": "Analyzing…",
+    "generateSignals": "Generate upcoming signals",
+    "analyzeSessions": "Analyze every session",
+    "runBacktest": "Run backtest",
+    "disclaimer": "Acceptances are simulated records. No order is sent to a broker."
+  },
+  "content": {
+    "eyebrow": "{{model}} model · no future training data",
+    "headings": {
+      "signals": "Daily signal schedule",
+      "analysis": "Daily range analysis",
+      "backtest": "Backtest results"
+    }
+  },
+  "errors": {
+    "unableToComplete": "Unable to complete",
+    "tickerAndDates": "Enter a ticker and date range.",
+    "invalidApiAddress": "The API address must start with http:// or https://.",
+    "horizonWhole": "The horizon must be a whole number of trading sessions.",
+    "initialCapital": "Enter an initial capital greater than zero.",
+    "dailySignals": "Unable to generate daily signals.",
+    "analysisUnsupported": "Your local API does not provide session-by-session analysis. Update to backend 2.0.0 and restart Uvicorn.",
+    "dailyAnalysis": "Unable to run the daily analysis.",
+    "backtest": "Unable to run the backtest.",
+    "recordAcceptance": "Unable to record the acceptance.",
+    "resetAcceptances": "Unable to reset acceptances.",
+    "modelUnsupported": "Your local API does not accept model selection. Update to backend 2.0.0 and restart Uvicorn.",
+    "apiStatus": "The API responded with status {{status}}."
+  },
+  "loading": {
+    "title": "Calculating signals",
+    "copy": "The model uses only the information known at each close."
+  },
+  "position": {
+    "title": "Simulated position",
+    "long": "LONG",
+    "none": "NO POSITION",
+    "acceptanceRecorded": "Acceptance recorded on {{date}}",
+    "recordGuidance": "Record an acceptance only after you decide to act on a signal.",
+    "howToRecord": "How to record it",
+    "howToRecordCopy": "Use the button inside the selected session card. Its date and reference price are applied automatically.",
+    "resetting": "Resetting…",
+    "reset": "Reset buys and sells",
+    "resetConfirm": "Delete all simulated buys and sells for {{ticker}}?"
+  },
+  "compatibility": {
+    "title": "Outdated local API",
+    "beforeCode": "The response does not contain multi-horizon forecasts. Update",
+    "afterCode": "to backend 2.0.0 and restart Uvicorn."
+  },
+  "summary": {
+    "sessionsInRange": "Sessions in range",
+    "availableSignals": "Available signals",
+    "preliminaryForecasts": "Preliminary forecasts",
+    "apiCalendar": "API / calendar"
+  },
+  "daily": {
+    "forecastSessionsAria": "Forecast sessions in range",
+    "rangeForecasts": "Range forecasts",
+    "analyzedSession": "Analyzed session",
+    "analysisBasis": "Analysis basis",
+    "closeOn": "Close on {{date}}",
+    "positionBefore": "Position before signal",
+    "referencePrice": "Reference price",
+    "recordedAcceptance": "Recorded acceptance: {{tradeType}} on {{date}}.",
+    "saveReference": "{{date}} and its reference price will be saved to the local database.",
+    "saving": "Saving…",
+    "acceptSell": "I accepted the sell on this date",
+    "acceptBuy": "I accepted the buy on this date",
+    "projection_one": "{{count}}-session projection",
+    "projection_other": "{{count}}-session projection"
+  },
+  "analysis": {
+    "analyzedSessions": "Analyzed sessions",
+    "evaluatedResults": "Evaluated results",
+    "futureForecasts": "Future forecasts",
+    "accuracyRate": "Accuracy rate",
+    "marketDaysRemoved": "{{count}} non-trading days were removed. Each valid session in the range has a card.",
+    "periodNote": "Latest close: {{latestClose}} · historical outcomes after {{historicalHorizon}} sessions · retraining every {{frequency}} sessions · API v{{version}}.",
+    "replayedClose": "Replayed close",
+    "projectedSession": "Projected session",
+    "analysisBasis": "Analysis basis",
+    "latestKnownClose": "Latest known close",
+    "dataAvailable": "Data available on that date",
+    "referencePrice": "Reference price",
+    "horizonUsed": "Horizon used",
+    "predictedClass": "Predicted class",
+    "observedResult": "Observed result",
+    "entryExit": "Entry → exit",
+    "pendingPrice": "Pending price",
+    "observedReturn": "Observed return",
+    "trainingSamples_one": "{{count}} training sample",
+    "trainingSamples_other": "{{count}} training samples"
+  },
+  "backtest": {
+    "finalStrategyCapital": "Final strategy capital",
+    "finalBuyHoldCapital": "Final buy-and-hold capital",
+    "strategyReturn": "Strategy return",
+    "buyHoldReturn": "Buy-and-hold return",
+    "approximateSharpe": "Approximate Sharpe",
+    "approximateSortino": "Approximate Sortino",
+    "maximumDrawdown": "Maximum drawdown",
+    "exposure": "Exposure",
+    "executedTrades": "Executed trades",
+    "winRate": "Win rate",
+    "retrainings": "Retrainings",
+    "periodNote": "Model used: {{model}} · requested period: {{start}} to {{end}} · first signal on {{firstSignal}} · last exit on {{lastExit}} · {{horizon}}-session horizon.",
+    "analyzedClose": "Analyzed close",
+    "entry": "Entry",
+    "exit": "Exit",
+    "assetReturn": "Asset return",
+    "strategyCapital": "Strategy capital",
+    "buyHoldCapital": "Buy-and-hold capital"
+  },
+  "common": {
+    "pending": "Pending",
+    "session": "session",
+    "sessions": "sessions",
+    "down": "Down",
+    "neutral": "Neutral",
+    "up": "Up",
+    "threshold": "Threshold",
+    "cagr": "CAGR"
+  },
+  "results": {
+    "correct": "CORRECT",
+    "divergence": "DIVERGENCE",
+    "pending": "PENDING"
+  },
+  "positions": {
+    "long": "Long",
+    "no_position": "No position"
+  },
+  "projectionTypes": {
+    "updated": "UPDATED",
+    "preliminary": "PRELIMINARY",
+    "historical": "HISTORICAL"
+  },
+  "actions": {
+    "labels": {
+      "buy": "BUY",
+      "sell": "SELL",
+      "wait": "WAIT",
+      "hold": "HOLD",
+      "waiting_for_data": "WAITING FOR DATA",
+      "sell_short": "SELL / SHORT",
+      "stay_out": "STAY OUT"
+    }
+  },
+  "classes": {
+    "down": "Down",
+    "neutral": "Neutral",
+    "up": "Up",
+    "pending": "Pending"
+  },
+  "models": {
+    "names": {
+      "lightgbm": "LightGBM",
+      "catboost": "CatBoost",
+      "xgboost": "XGBoost",
+      "logistic": "Logistic Regression",
+      "random_forest": "Random Forest",
+      "ensemble": "Ensemble"
+    },
+    "descriptions": {
+      "lightgbm": "Fast, regularized default model.",
+      "catboost": "Gradient boosting with ordered training.",
+      "xgboost": "Gradient boosting with alternative regularization.",
+      "logistic": "Simple and interpretable linear baseline.",
+      "random_forest": "An ensemble of randomly sampled decision trees.",
+      "ensemble": "Average probabilities from the three boosting models."
+    }
+  }
+}

@@ -2,18 +2,42 @@
 
 Independent React + Vite frontend for the Quant Horizon API. The application displays upcoming market signals, session-by-session analyses, quantitative backtests, and simulated buy/sell acceptances. It does not send brokerage orders.
 
+## Features
+
+- English and Brazilian Portuguese interface
+- Automatic browser-language detection
+- Manual `EN` / `PT` language selector
+- Language preference persisted in `localStorage`
+- Locale-aware dates, percentages, and currencies
+- Upcoming forecasts, daily analyses, and financial backtests
+- Simulated buy and sell acceptances
+- Docker and Caddy configuration for Railway
+
 ## Project structure
 
 ```text
 quant_horizon_front/
 ├── public/
 ├── src/
+│   ├── components/
+│   │   └── LanguageSwitcher.tsx
+│   ├── i18n/
+│   │   └── index.ts
 │   ├── lib/
+│   ├── locales/
+│   │   ├── en/
+│   │   │   └── translation.json
+│   │   └── pt-BR/
+│   │       └── translation.json
 │   ├── App.tsx
 │   ├── main.tsx
 │   ├── styles.css
 │   └── vite-env.d.ts
+├── .dockerignore
 ├── .gitignore
+├── .npmrc
+├── Caddyfile
+├── Dockerfile
 ├── index.html
 ├── package-lock.json
 ├── package.json
@@ -31,32 +55,30 @@ quant_horizon_front/
 ## Install
 
 ```bash
-npm install
+npm ci
 ```
 
 ## Environment configuration
 
-The frontend reads the API address from:
+The frontend reads the public API base address from:
 
 ```text
 VITE_API_URL
 ```
 
-For local development, create a `.env` file in the project root:
+For local development, create a local `.env` file:
 
 ```env
 VITE_API_URL=http://127.0.0.1:8000
 ```
 
-The `.env` file is ignored by Git and is not required on Railway.
-
-For Railway, add this variable in the frontend service settings:
+The `.env` file is ignored by Git. On Railway, configure the variable in the frontend service instead:
 
 ```env
 VITE_API_URL=https://quanthorizon-production.up.railway.app
 ```
 
-Vite injects variables prefixed with `VITE_` during the build. Redeploy the frontend after changing the API address.
+Vite injects `VITE_*` variables during the build. Redeploy the frontend after changing this value.
 
 ## Run locally
 
@@ -70,38 +92,59 @@ The application is normally available at:
 http://localhost:5173
 ```
 
-## Type checking
+## Validation and production build
 
 ```bash
 npm run typecheck
-```
-
-## Production build
-
-```bash
 npm run build
 ```
 
-The build command first validates the TypeScript code and then writes the production application to `dist/`.
+The production files are written to `dist/`.
 
-To preview the production build locally:
+To preview the build locally:
 
 ```bash
 npm run preview
 ```
 
-## Railway deployment
+## Internationalization
 
-Create a Railway project connected to the `quant_horizon_front` GitHub repository.
-
-Use these commands if Railway does not detect them automatically:
+Translation resources are stored in:
 
 ```text
-Build Command: npm run build
-Start Command: npm run start
+src/locales/en/translation.json
+src/locales/pt-BR/translation.json
 ```
 
-Add this Railway variable to the frontend project:
+The application uses `i18next`, `react-i18next`, and `i18next-browser-languagedetector`. The selected language is stored under:
+
+```text
+quant-horizon-language
+```
+
+in the browser's `localStorage`.
+
+Texts returned directly by the backend, such as forecast descriptions and validation details, remain in the language produced by the API. For fully localized backend descriptions, the API should return stable message codes and parameters instead of complete sentences.
+
+## Railway deployment
+
+The repository includes a multi-stage `Dockerfile`:
+
+1. Node.js builds the Vite application.
+2. Caddy serves the generated static files.
+
+Railway settings:
+
+```text
+Root Directory: /
+Dockerfile Path: /Dockerfile
+Build Command: empty
+Start Command: empty
+Healthcheck Path: /health
+Public Domain Target Port: 8080
+```
+
+Required Railway variable:
 
 ```env
 VITE_API_URL=https://quanthorizon-production.up.railway.app

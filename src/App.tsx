@@ -1,8 +1,10 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
+import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { createBacktestPayload } from "./lib/backtest";
 import { createDailyAnalysisPayload } from "./lib/daily-analysis";
 import {
-  modelDescription,
   isInvestmentModel,
   INVESTMENT_MODELS,
   modelName,
@@ -14,8 +16,8 @@ import {
   formatDate,
   formatShortDate,
   formatMoney,
-  formatClassName,
   formatPercentage,
+  languageToLocale,
 } from "./lib/presentation";
 
 type QueryMode = "signals" | "analysis" | "backtest";
@@ -178,7 +180,7 @@ type PeriodBacktestResponse = {
 const ENV_API_URL = import.meta.env.VITE_API_URL?.trim();
 const DEFAULT_API_URL = ENV_API_URL || "http://127.0.0.1:8000";
 
-function errorMessage(data: unknown, status: number) {
+function errorMessage(data: unknown, status: number, t: TFunction) {
   if (data && typeof data === "object" && "detail" in data) {
     const detail = (data as { detail: unknown }).detail;
     if (typeof detail === "string") return detail;
@@ -191,7 +193,7 @@ function errorMessage(data: unknown, status: number) {
             ? item.loc.filter((part: unknown) => part !== "body").join(".")
             : "";
           if (location === "model" && message?.toLowerCase().includes("extra")) {
-            return "Your local API does not accept model selection. Update to backend 2.0.0 and restart Uvicorn.";
+            return t("errors.modelUnsupported");
           }
           return message ? `${location ? `${location}: ` : ""}${message}` : null;
         })
@@ -199,7 +201,7 @@ function errorMessage(data: unknown, status: number) {
       if (messages.length > 0) return messages.join(" ");
     }
   }
-  return `The API responded with status ${status}.`;
+  return t("errors.apiStatus", { status });
 }
 
 function requestHeaders(key: string) {
@@ -209,6 +211,24 @@ function requestHeaders(key: string) {
 }
 
 export default function Home() {
+  const { t, i18n } = useTranslation();
+  const locale = languageToLocale(i18n.resolvedLanguage ?? i18n.language);
+  const translatedModelName = (value: InvestmentModel) => t(`models.names.${value}`, {
+    defaultValue: modelName(value),
+  });
+  const translatedAction = (value: string) => t(`actions.labels.${value.toLowerCase()}`, {
+    defaultValue: value.replaceAll("_", " "),
+  });
+  const translatedProjectionType = (value: string) => t(`projectionTypes.${value.toLowerCase()}`, {
+    defaultValue: value,
+  });
+  const translatedClassName = (value: string | null) => {
+    if (!value) return t("common.pending");
+    return t(`classes.${value.toLowerCase()}`, {
+      defaultValue: value.charAt(0).toUpperCase() + value.slice(1),
+    });
+  };
+
   const [ticker, setTicker] = useState("AAPL");
   const [model, setModel] = useState<InvestmentModel>("lightgbm");
   const [queryMode, setQueryMode] = useState<QueryMode>("signals");
@@ -249,11 +269,11 @@ export default function Home() {
       headers: requestHeaders(providedKey),
     });
     const data = (await response.json().catch(() => null)) as unknown;
-    if (!response.ok) throw new Error(errorMessage(data, response.status));
+    if (!response.ok) throw new Error(errorMessage(data, response.status, t));
     const state = data as PositionState;
     setPositionState(state);
     return state;
-  }, []);
+  }, [t]);
 
   const fetchDailyForecasts = useCallback(async (
     providedTicker: string,
@@ -265,8 +285,8 @@ export default function Home() {
   ) => {
     const normalizedTicker = providedTicker.trim().toUpperCase();
     const baseUrl = providedUrl.trim().replace(/\/$/, "");
-    if (!normalizedTicker || !start || !end) throw new Error("Enter a ticker and date range.");
-    if (!/^https?:\/\//i.test(baseUrl)) throw new Error("The API address must start with http:// or https://.");
+    if (!normalizedTicker || !start || !end) throw new Error(t("errors.tickerAndDates"));
+    if (!/^https?:\/\//i.test(baseUrl)) throw new Error(t("errors.invalidApiAddress"));
 
     setIsLoading(true);
     setError("");
@@ -289,15 +309,15 @@ export default function Home() {
         }),
       });
       const data = (await response.json().catch(() => null)) as unknown;
-      if (!response.ok) throw new Error(errorMessage(data, response.status));
+      if (!response.ok) throw new Error(errorMessage(data, response.status, t));
       setDailyForecasts(data as DailyForecastResponse);
       await fetchPosition(normalizedTicker, baseUrl, providedKey);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Unable to generate daily signals.");
+      setError(failure instanceof Error ? failure.message : t("errors.dailySignals"));
     } finally {
       setIsLoading(false);
     }
-  }, [fetchPosition]);
+  }, [fetchPosition, t]);
 
   useEffect(() => {
     if (initialQueryCompleted.current) return;
@@ -322,17 +342,17 @@ export default function Home() {
     const normalizedTicker = ticker.trim().toUpperCase();
     const baseUrl = apiUrl.trim().replace(/\/$/, "");
     if (!normalizedTicker || !startDate || !endDate) {
-      setError("Enter a ticker and date range.");
+      setError(t("errors.tickerAndDates"));
       return;
     }
     if (!/^https?:\/\//i.test(baseUrl)) {
-      setError("The API address must start with http:// or https://.");
+      setError(t("errors.invalidApiAddress"));
       return;
     }
 
     if (queryMode === "analysis") {
       if (!Number.isInteger(Number(analysisHorizon)) || Number(analysisHorizon) < 1) {
-        setError("The horizon must be a whole number of trading sessions.");
+        setError(t("errors.horizonWhole"));
         return;
       }
       setIsLoading(true);
@@ -356,12 +376,12 @@ export default function Home() {
         });
         const data = (await response.json().catch(() => null)) as unknown;
         if (response.status === 404) {
-          throw new Error("Your local API does not provide session-by-session analysis. Update to backend 2.0.0 and restart Uvicorn.");
+          throw new Error(t("errors.analysisUnsupported"));
         }
-        if (!response.ok) throw new Error(errorMessage(data, response.status));
+        if (!response.ok) throw new Error(errorMessage(data, response.status, t));
         setDailyAnalysis(data as DailyAnalysisResponse);
       } catch (failure) {
-        setError(failure instanceof Error ? failure.message : "Unable to run the daily analysis.");
+        setError(failure instanceof Error ? failure.message : t("errors.dailyAnalysis"));
       } finally {
         setIsLoading(false);
       }
@@ -369,11 +389,11 @@ export default function Home() {
     }
 
     if (!Number.isFinite(Number(initialCapital)) || Number(initialCapital) <= 0) {
-      setError("Enter an initial capital greater than zero.");
+      setError(t("errors.initialCapital"));
       return;
     }
     if (!Number.isInteger(Number(backtestHorizon)) || Number(backtestHorizon) < 1) {
-      setError("The horizon must be a whole number of trading sessions.");
+      setError(t("errors.horizonWhole"));
       return;
     }
 
@@ -398,10 +418,10 @@ export default function Home() {
         )),
       });
       const data = (await response.json().catch(() => null)) as unknown;
-      if (!response.ok) throw new Error(errorMessage(data, response.status));
+      if (!response.ok) throw new Error(errorMessage(data, response.status, t));
       setBacktestResult(data as PeriodBacktestResponse);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Unable to run the backtest.");
+      setError(failure instanceof Error ? failure.message : t("errors.backtest"));
     } finally {
       setIsLoading(false);
     }
@@ -427,11 +447,11 @@ export default function Home() {
         },
       );
       const data = (await response.json().catch(() => null)) as unknown;
-      if (!response.ok) throw new Error(errorMessage(data, response.status));
+      if (!response.ok) throw new Error(errorMessage(data, response.status, t));
       setPositionState(data as PositionState);
       await fetchDailyForecasts(normalizedTicker, startDate, endDate, baseUrl, apiKey, model);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Unable to record the acceptance.");
+      setError(failure instanceof Error ? failure.message : t("errors.recordAcceptance"));
     } finally {
       setAcceptanceInProgress(null);
     }
@@ -439,7 +459,7 @@ export default function Home() {
 
   async function resetAcceptances() {
     const normalizedTicker = ticker.trim().toUpperCase();
-    if (!window.confirm(`Delete all simulated buys and sells for ${normalizedTicker}?`)) return;
+    if (!window.confirm(t("position.resetConfirm", { ticker: normalizedTicker }))) return;
 
     const baseUrl = apiUrl.trim().replace(/\/$/, "");
     setIsResettingAcceptances(true);
@@ -450,11 +470,11 @@ export default function Home() {
         { method: "DELETE", headers: requestHeaders(apiKey) },
       );
       const data = (await response.json().catch(() => null)) as unknown;
-      if (!response.ok) throw new Error(errorMessage(data, response.status));
+      if (!response.ok) throw new Error(errorMessage(data, response.status, t));
       setPositionState(data as PositionState);
       await fetchDailyForecasts(normalizedTicker, startDate, endDate, baseUrl, apiKey, model);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Unable to reset acceptances.");
+      setError(failure instanceof Error ? failure.message : t("errors.resetAcceptances"));
     } finally {
       setIsResettingAcceptances(false);
     }
@@ -483,38 +503,31 @@ export default function Home() {
       <header className="topbar">
         <div className="brand-mark" aria-hidden="true" />
         <span className="brand">QUANT HORIZON</span>
-        <span className="topbar-title">Market forecasts and backtests</span>
-        <span className="read-only">No orders are sent</span>
+        <span className="topbar-title">{t("app.subtitle")}</span>
+        <LanguageSwitcher />
+        <span className="read-only">{t("app.readOnly")}</span>
       </header>
 
       <div className="workspace">
         <aside className="sidebar">
           <div>
-            <p className="eyebrow">Asset research</p>
-            <h1>{queryMode === "signals"
-              ? "Plan each session"
-              : queryMode === "analysis"
-                ? "Review day by day"
-                : "Measure the strategy"}</h1>
+            <p className="eyebrow">{t("app.assetResearch")}</p>
+            <h1>{t(`sidebar.titles.${queryMode}`)}</h1>
             <p className="sidebar-copy">
-              {queryMode === "signals"
-                ? "One forecast per day, always based on the previous close."
-                : queryMode === "analysis"
-                  ? "Compare the past and project the future without skipping sessions."
-                  : "Simulate capital and trades without using future information."}
+              {t(`sidebar.copies.${queryMode}`)}
             </p>
           </div>
 
           <form onSubmit={submitQuery} className="form">
-            <label>What do you want to analyze?</label>
-            <div className="mode-selector" role="group" aria-label="Analysis type">
+            <label>{t("form.question")}</label>
+            <div className="mode-selector" role="group" aria-label={t("form.analysisType")}>
               <button
                 type="button"
                 className={queryMode === "signals" ? "mode-option active" : "mode-option"}
                 aria-pressed={queryMode === "signals"}
                 onClick={() => changeMode("signals")}
               >
-                Upcoming signals
+                {t("form.modes.signals")}
               </button>
               <button
                 type="button"
@@ -522,7 +535,7 @@ export default function Home() {
                 aria-pressed={queryMode === "analysis"}
                 onClick={() => changeMode("analysis")}
               >
-                Session analysis
+                {t("form.modes.analysis")}
               </button>
               <button
                 type="button"
@@ -530,44 +543,44 @@ export default function Home() {
                 aria-pressed={queryMode === "backtest"}
                 onClick={() => changeMode("backtest")}
               >
-                Financial backtest
+                {t("form.modes.backtest")}
               </button>
             </div>
 
-            <label htmlFor="ticker">Asset (ticker)</label>
+            <label htmlFor="ticker">{t("form.ticker")}</label>
             <div className="ticker-field">
               <span aria-hidden="true">⌕</span>
               <input id="ticker" value={ticker} onChange={(e) => setTicker(e.target.value.toUpperCase())} placeholder="AAPL" autoComplete="off" />
             </div>
 
             <div className="model-field">
-              <label htmlFor="model">Analysis model</label>
+              <label htmlFor="model">{t("form.model")}</label>
               <select
                 id="model"
                 value={model}
                 onChange={(event) => setModel(event.target.value as InvestmentModel)}
               >
                 {INVESTMENT_MODELS.map((option) => (
-                  <option value={option.value} key={option.value}>{option.name}</option>
+                  <option value={option.value} key={option.value}>{translatedModelName(option.value)}</option>
                 ))}
               </select>
-              <p className="model-help">{modelDescription(model)}</p>
+              <p className="model-help">{t(`models.descriptions.${model}`)}</p>
             </div>
 
             <div className="period-grid">
               <div className="field-group">
-                <label htmlFor="start-date">Start date</label>
+                <label htmlFor="start-date">{t("form.startDate")}</label>
                 <input id="start-date" type="date" value={startDate} max={endDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
               <div className="field-group">
-                <label htmlFor="end-date">End date</label>
+                <label htmlFor="end-date">{t("form.endDate")}</label>
                 <input id="end-date" type="date" value={endDate} min={startDate} max={queryMode === "backtest" ? localIsoDate(0) : undefined} onChange={(e) => setEndDate(e.target.value)} />
               </div>
             </div>
             {queryMode === "analysis" && (
               <div className="analysis-parameters">
                 <div className="field-group">
-                  <label htmlFor="analysis-horizon">Result after how many sessions?</label>
+                  <label htmlFor="analysis-horizon">{t("form.analysisHorizon")}</label>
                   <input id="analysis-horizon" type="number" min="1" max="60" step="1" value={analysisHorizon} onChange={(e) => setAnalysisHorizon(e.target.value)} />
                 </div>
               </div>
@@ -575,85 +588,77 @@ export default function Home() {
             {queryMode === "backtest" && (
               <div className="period-grid backtest-parameters">
                 <div className="field-group">
-                  <label htmlFor="initial-capital">Initial capital</label>
+                  <label htmlFor="initial-capital">{t("form.initialCapital")}</label>
                   <input id="initial-capital" type="number" min="1" step="0.01" value={initialCapital} onChange={(e) => setInitialCapital(e.target.value)} />
                 </div>
                 <div className="field-group">
-                  <label htmlFor="backtest-horizon">Horizon (trading sessions)</label>
+                  <label htmlFor="backtest-horizon">{t("form.backtestHorizon")}</label>
                   <input id="backtest-horizon" type="number" min="1" max="60" step="1" value={backtestHorizon} onChange={(e) => setBacktestHorizon(e.target.value)} />
                 </div>
               </div>
             )}
             <p className="field-help period-help">
-              {queryMode === "signals"
-                ? "Future sessions receive preliminary forecasts and are recalculated after each new close."
-                : queryMode === "analysis"
-                  ? "The past shows one signal per session. The future uses the latest available close and remains pending."
-                  : "The model is retrained periodically and reinvests all capital after each non-overlapping trade."}
+              {t(`form.help.${queryMode}`)}
             </p>
 
             <details className="connection">
-              <summary>API connection</summary>
+              <summary>{t("form.apiConnection")}</summary>
               <div className="connection-fields">
-                <label htmlFor="api-url">API address</label>
+                <label htmlFor="api-url">{t("form.apiAddress")}</label>
                 <input id="api-url" value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} inputMode="url" />
-                <label htmlFor="api-key">API key (optional)</label>
+                <label htmlFor="api-key">{t("form.apiKey")}</label>
                 <input id="api-key" value={apiKey} onChange={(e) => setApiKey(e.target.value)} type="password" autoComplete="off" />
               </div>
             </details>
 
             <button type="submit" disabled={isLoading}>
               {isLoading
-                ? <><span className="spinner" aria-hidden="true" />Analyzing…</>
+                ? <><span className="spinner" aria-hidden="true" />{t("form.analyzing")}</>
                 : <>{queryMode === "signals"
-                  ? "Generate upcoming signals"
+                  ? t("form.generateSignals")
                   : queryMode === "analysis"
-                    ? "Analyze every session"
-                    : "Run backtest"} <span aria-hidden="true">→</span></>}
+                    ? t("form.analyzeSessions")
+                    : t("form.runBacktest")} <span aria-hidden="true">→</span></>}
             </button>
           </form>
 
-          <p className="disclaimer">Acceptances are simulated records. No order is sent to a broker.</p>
+          <p className="disclaimer">{t("form.disclaimer")}</p>
         </aside>
 
         <section className="content" aria-live="polite">
           <div className="content-heading">
             <div>
-              <p className="eyebrow">{modelName(displayedModel)} model · no future training data</p>
-              <h2>{queryMode === "backtest"
-                ? "Backtest results"
-                : queryMode === "analysis"
-                  ? "Daily range analysis"
-                  : "Daily signal schedule"}</h2>
+              <p className="eyebrow">{t("content.eyebrow", { model: translatedModelName(displayedModel) })}</p>
+              <h2>{t(`content.headings.${queryMode}`)}</h2>
             </div>
             {(dailyForecasts || dailyAnalysis || backtestResult) && (
               <div className="heading-chips">
-                <span className="model-chip">{modelName(displayedModel)}</span>
+                <span className="model-chip">{translatedModelName(displayedModel)}</span>
                 <span className="ticker-chip">{(dailyForecasts || dailyAnalysis || backtestResult)?.ticker}</span>
               </div>
             )}
           </div>
 
-          {error && <div className="error-card" role="alert"><span>!</span><div><strong>Unable to complete</strong><p>{error}</p></div></div>}
+          {error && <div className="error-card" role="alert"><span>!</span><div><strong>{t("errors.unableToComplete")}</strong><p>{error}</p></div></div>}
 
-          {isLoading && <div className="empty-state loading-state"><div className="pulse" /><h3>Calculating signals</h3><p>The model uses only the information known at each close.</p></div>}
+          {isLoading && <div className="empty-state loading-state"><div className="pulse" /><h3>{t("loading.title")}</h3><p>{t("loading.copy")}</p></div>}
 
           {!isLoading && queryMode === "signals" && positionState && (
             <section className="position-card">
               <div className="position-copy">
-                <span>Simulated position</span>
+                <span>{t("position.title")}</span>
                 <strong className={positionState.status === "LONG" ? "position-open" : "position-flat"}>
-                  {positionState.status === "LONG" ? "LONG" : "NO POSITION"}
+                  {positionState.status === "LONG" ? t("position.long") : t("position.none")}
                 </strong>
                 <small>
                   {positionState.status === "LONG" && positionState.purchase_date
-                    ? `Acceptance recorded on ${formatDate(positionState.purchase_date)}${positionState.purchase_price !== null ? ` · ${formatMoney(positionState.purchase_price, dailyForecasts?.currency ?? "")}` : ""}`
-                    : "Record an acceptance only after you decide to act on a signal."}
+                    ? `${t("position.acceptanceRecorded", { date: formatDate(positionState.purchase_date, locale) })}${positionState.purchase_price !== null ? ` · ${formatMoney(positionState.purchase_price, dailyForecasts?.currency ?? "", locale)}` : ""}`
+                    : t("position.recordGuidance")}
                 </small>
               </div>
               <div className="position-guidance">
-                <strong>How to record it</strong>
-                <span>Use the button inside the selected session card. Its date and reference price are applied automatically.</span>
+                <strong>{t("position.howToRecord")}</strong>
+                <span>{t("position.howToRecordCopy")}</span>
                 {positionState.trades.length > 0 && (
                   <button
                     type="button"
@@ -661,7 +666,7 @@ export default function Home() {
                     onClick={() => void resetAcceptances()}
                     disabled={isResettingAcceptances || acceptanceInProgress !== null}
                   >
-                    {isResettingAcceptances ? "Resetting…" : "Reset buys and sells"}
+                    {isResettingAcceptances ? t("position.resetting") : t("position.reset")}
                   </button>
                 )}
               </div>
@@ -672,30 +677,29 @@ export default function Home() {
             <section className="daily-results">
               {!hasMultiHorizonForecasts && (
                 <div className="compatibility-alert" role="alert">
-                  <strong>Outdated local API</strong>
+                  <strong>{t("compatibility.title")}</strong>
                   <span>
-                    The response does not contain multi-horizon forecasts. Update
-                    <code>api.py</code> to backend 2.0.0 and restart Uvicorn.
+                    {t("compatibility.beforeCode")} <code>api.py</code> {t("compatibility.afterCode")}
                   </span>
                 </div>
               )}
               <div className="agenda-summary">
-                <div><span>Sessions in range</span><strong>{dailyForecasts.total_trading_days}</strong></div>
-                <div><span>Available signals</span><strong>{dailyForecasts.total_available}</strong></div>
-                <div><span>Preliminary forecasts</span><strong>{dailyForecasts.total_preliminary ?? "—"}</strong></div>
-                <div><span>API / calendar</span><strong>{dailyForecasts.api_version ? `v${dailyForecasts.api_version} · ` : ""}{dailyForecasts.market_calendar}</strong></div>
+                <div><span>{t("summary.sessionsInRange")}</span><strong>{dailyForecasts.total_trading_days}</strong></div>
+                <div><span>{t("summary.availableSignals")}</span><strong>{dailyForecasts.total_available}</strong></div>
+                <div><span>{t("summary.preliminaryForecasts")}</span><strong>{dailyForecasts.total_preliminary ?? "—"}</strong></div>
+                <div><span>{t("summary.apiCalendar")}</span><strong>{dailyForecasts.api_version ? `v${dailyForecasts.api_version} · ` : ""}{dailyForecasts.market_calendar}</strong></div>
               </div>
 
-              <nav className="interval-strip" aria-label="Forecast sessions in range">
+              <nav className="interval-strip" aria-label={t("daily.forecastSessionsAria")}>
                 <div>
-                  <span>Range forecasts</span>
-                  <strong>{dailyForecasts.forecasts.length} {dailyForecasts.forecasts.length === 1 ? "session" : "sessions"}</strong>
+                  <span>{t("daily.rangeForecasts")}</span>
+                  <strong>{dailyForecasts.forecasts.length} {t(dailyForecasts.forecasts.length === 1 ? "common.session" : "common.sessions")}</strong>
                 </div>
                 <div className="interval-days">
                   {dailyForecasts.forecasts.map((item) => (
                     <a href={`#session-${item.target_date}`} className={actionClass(item.suggested_action)} key={item.target_date}>
-                      <span>{formatShortDate(item.target_date)}</span>
-                      <strong>{item.suggested_action.replaceAll("_", " ")}</strong>
+                      <span>{formatShortDate(item.target_date, locale)}</span>
+                      <strong>{translatedAction(item.suggested_action)}</strong>
                     </a>
                   ))}
                 </div>
@@ -705,35 +709,35 @@ export default function Home() {
                 {dailyForecasts.forecasts.map((item) => (
                   <article id={`session-${item.target_date}`} className={`daily-card ${item.status.toLowerCase()}`} key={item.target_date}>
                     <header>
-                      <div><span>Analyzed session</span><h3>{formatDate(item.target_date)}</h3></div>
+                      <div><span>{t("daily.analyzedSession")}</span><h3>{formatDate(item.target_date, locale)}</h3></div>
                       <div className="daily-badges">
-                        {item.forecast_type && <span className={`projection-badge ${item.forecast_type.toLowerCase()}`}>{item.forecast_type}</span>}
-                        <span className={`daily-action ${actionClass(item.suggested_action)}`}>{item.suggested_action.replaceAll("_", " ")}</span>
+                        {item.forecast_type && <span className={`projection-badge ${item.forecast_type.toLowerCase()}`}>{translatedProjectionType(item.forecast_type)}</span>}
+                        <span className={`daily-action ${actionClass(item.suggested_action)}`}>{translatedAction(item.suggested_action)}</span>
                       </div>
                     </header>
                     <div className="daily-meta">
                       <div>
-                        <span>Analysis basis</span>
-                        <strong>Close on {formatDate(item.base_close_date)}</strong>
-                        {typeof item.horizon_used === "number" && <small>{item.horizon_used}-{item.horizon_used === 1 ? "session" : "session"} projection</small>}
+                        <span>{t("daily.analysisBasis")}</span>
+                        <strong>{t("daily.closeOn", { date: formatDate(item.base_close_date, locale) })}</strong>
+                        {typeof item.horizon_used === "number" && <small>{t("daily.projection", { count: item.horizon_used })}</small>}
                       </div>
-                      <div><span>Position before signal</span><strong>{item.position_before === "LONG" ? "Long" : "No position"}</strong></div>
-                      <div><span>Reference price</span><strong>{item.reference_price !== null ? formatMoney(item.reference_price, dailyForecasts.currency) : "Pending"}</strong></div>
+                      <div><span>{t("daily.positionBefore")}</span><strong>{item.position_before === "LONG" ? t("positions.long") : t("positions.no_position")}</strong></div>
+                      <div><span>{t("daily.referencePrice")}</span><strong>{item.reference_price !== null ? formatMoney(item.reference_price, dailyForecasts.currency, locale) : t("common.pending")}</strong></div>
                     </div>
                     {item.status === "AVAILABLE" && item.probability_down !== null && item.probability_neutral !== null && item.probability_up !== null && (
                       <div className="daily-probabilities">
-                        <span>Down <strong>{formatPercentage(item.probability_down)}</strong></span>
-                        <span>Neutral <strong>{formatPercentage(item.probability_neutral)}</strong></span>
-                        <span>Up <strong>{formatPercentage(item.probability_up)}</strong></span>
-                        <span>Threshold <strong>{item.threshold !== null ? formatPercentage(item.threshold) : "—"}</strong></span>
+                        <span>{t("common.down")} <strong>{formatPercentage(item.probability_down, locale)}</strong></span>
+                        <span>{t("common.neutral")} <strong>{formatPercentage(item.probability_neutral, locale)}</strong></span>
+                        <span>{t("common.up")} <strong>{formatPercentage(item.probability_up, locale)}</strong></span>
+                        <span>{t("common.threshold")} <strong>{item.threshold !== null ? formatPercentage(item.threshold, locale) : "—"}</strong></span>
                       </div>
                     )}
                     <p className="daily-description">{item.description}</p>
-                    {item.registered_acceptance && <p className="daily-accepted">Recorded acceptance: {item.registered_acceptance.trade_type} on {formatDate(item.registered_acceptance.acceptance_date)}.</p>}
+                    {item.registered_acceptance && <p className="daily-accepted">{t("daily.recordedAcceptance", { tradeType: translatedAction(item.registered_acceptance.trade_type), date: formatDate(item.registered_acceptance.acceptance_date, locale) })}</p>}
                     {!item.registered_acceptance && item.status === "AVAILABLE" && (
                       <div className="daily-card-actions">
                         <span>
-                          {formatDate(item.target_date)} and its reference price will be saved to the local database.
+                          {t("daily.saveReference", { date: formatDate(item.target_date, locale) })}
                         </span>
                         <button
                           type="button"
@@ -742,10 +746,10 @@ export default function Home() {
                           disabled={acceptanceInProgress !== null}
                         >
                           {acceptanceInProgress === item.target_date
-                            ? "Saving…"
+                            ? t("daily.saving")
                             : item.position_before === "LONG"
-                              ? "I accepted the sell on this date"
-                              : "I accepted the buy on this date"}
+                              ? t("daily.acceptSell")
+                              : t("daily.acceptBuy")}
                         </button>
                       </div>
                     )}
@@ -758,57 +762,62 @@ export default function Home() {
           {!isLoading && dailyAnalysis && (
             <section className="analysis-results">
               <div className="analysis-summary">
-                <div><span>Analyzed sessions</span><strong>{dailyAnalysis.total_trading_days}</strong></div>
-                <div><span>Evaluated results</span><strong>{dailyAnalysis.total_evaluated}</strong></div>
-                <div><span>Future forecasts</span><strong>{dailyAnalysis.total_preliminary}</strong></div>
-                <div><span>Accuracy rate</span><strong>{dailyAnalysis.accuracy_rate === null ? "Pending" : formatPercentage(dailyAnalysis.accuracy_rate)}</strong></div>
+                <div><span>{t("analysis.analyzedSessions")}</span><strong>{dailyAnalysis.total_trading_days}</strong></div>
+                <div><span>{t("analysis.evaluatedResults")}</span><strong>{dailyAnalysis.total_evaluated}</strong></div>
+                <div><span>{t("analysis.futureForecasts")}</span><strong>{dailyAnalysis.total_preliminary}</strong></div>
+                <div><span>{t("analysis.accuracyRate")}</span><strong>{dailyAnalysis.accuracy_rate === null ? t("common.pending") : formatPercentage(dailyAnalysis.accuracy_rate, locale)}</strong></div>
               </div>
               <div className="market-days-note">
                 <strong>{dailyAnalysis.market_calendar}</strong>
                 <span>
-                  {dailyAnalysis.ignored_non_trading_days} non-trading days were removed. Each valid session in the range has a card.
+                  {t("analysis.marketDaysRemoved", { count: dailyAnalysis.ignored_non_trading_days })}
                 </span>
               </div>
               <p className="analysis-period-note">
-                Latest close: {formatDate(dailyAnalysis.latest_available_close)} · historical outcomes after {dailyAnalysis.historical_horizon_trading_days} sessions · retraining every {dailyAnalysis.retraining_frequency_trading_days} sessions · API v{dailyAnalysis.api_version}.
+                {t("analysis.periodNote", {
+                  latestClose: formatDate(dailyAnalysis.latest_available_close, locale),
+                  historicalHorizon: dailyAnalysis.historical_horizon_trading_days,
+                  frequency: dailyAnalysis.retraining_frequency_trading_days,
+                  version: dailyAnalysis.api_version,
+                })}
               </p>
               <div className="analysis-list">
                 {dailyAnalysis.analyses.map((item) => {
                   const resultState = item.is_correct === true ? "correct" : item.is_correct === false ? "error" : "pending";
-                  const resultLabel = item.is_correct === true ? "CORRECT" : item.is_correct === false ? "DIVERGENCE" : "PENDING";
+                  const resultLabel = item.is_correct === true ? t("results.correct") : item.is_correct === false ? t("results.divergence") : t("results.pending");
                   return (
                     <article className={`analysis-card ${item.forecast_type.toLowerCase()}`} key={`${item.reference_date}-${item.forecast_type}`}>
                       <header>
                         <div>
-                          <span>{item.forecast_type === "HISTORICAL" ? "Replayed close" : "Projected session"}</span>
-                          <h3>{formatDate(item.reference_date)}</h3>
+                          <span>{item.forecast_type === "HISTORICAL" ? t("analysis.replayedClose") : t("analysis.projectedSession")}</span>
+                          <h3>{formatDate(item.reference_date, locale)}</h3>
                         </div>
                         <div className="analysis-badges">
-                          <span className={`projection-badge ${item.forecast_type.toLowerCase()}`}>{item.forecast_type}</span>
-                          <span className={`daily-action ${actionClass(item.action)}`}>{item.action}</span>
+                          <span className={`projection-badge ${item.forecast_type.toLowerCase()}`}>{translatedProjectionType(item.forecast_type)}</span>
+                          <span className={`daily-action ${actionClass(item.action)}`}>{translatedAction(item.action)}</span>
                           <span className={`result-badge ${resultState}`}>{resultLabel}</span>
                         </div>
                       </header>
                       <div className="analysis-meta">
-                        <div><span>Analysis basis</span><strong>{formatDate(item.base_date)}</strong><small>{item.forecast_type === "PRELIMINARY" ? "Latest known close" : "Data available on that date"}</small></div>
-                        <div><span>Reference price</span><strong>{formatMoney(item.reference_price, dailyAnalysis.currency)}</strong></div>
-                        <div><span>Horizon used</span><strong>{item.horizon_used} {item.horizon_used === 1 ? "session" : "sessions"}</strong><small>{item.training_samples} training samples</small></div>
+                        <div><span>{t("analysis.analysisBasis")}</span><strong>{formatDate(item.base_date, locale)}</strong><small>{item.forecast_type === "PRELIMINARY" ? t("analysis.latestKnownClose") : t("analysis.dataAvailable")}</small></div>
+                        <div><span>{t("analysis.referencePrice")}</span><strong>{formatMoney(item.reference_price, dailyAnalysis.currency, locale)}</strong></div>
+                        <div><span>{t("analysis.horizonUsed")}</span><strong>{item.horizon_used} {t(item.horizon_used === 1 ? "common.session" : "common.sessions")}</strong><small>{t("analysis.trainingSamples", { count: item.training_samples })}</small></div>
                       </div>
                       <div className="daily-probabilities">
-                        <span>Down <strong>{formatPercentage(item.probability_down)}</strong></span>
-                        <span>Neutral <strong>{formatPercentage(item.probability_neutral)}</strong></span>
-                        <span>Up <strong>{formatPercentage(item.probability_up)}</strong></span>
-                        <span>Threshold <strong>{formatPercentage(item.threshold)}</strong></span>
+                        <span>{t("common.down")} <strong>{formatPercentage(item.probability_down, locale)}</strong></span>
+                        <span>{t("common.neutral")} <strong>{formatPercentage(item.probability_neutral, locale)}</strong></span>
+                        <span>{t("common.up")} <strong>{formatPercentage(item.probability_up, locale)}</strong></span>
+                        <span>{t("common.threshold")} <strong>{formatPercentage(item.threshold, locale)}</strong></span>
                       </div>
                       <div className="analysis-outcome">
-                        <div><span>Predicted class</span><strong>{formatClassName(item.predicted_class_name)}</strong></div>
-                        <div><span>Observed result</span><strong>{formatClassName(item.actual_class_name)}</strong></div>
+                        <div><span>{t("analysis.predictedClass")}</span><strong>{translatedClassName(item.predicted_class_name)}</strong></div>
+                        <div><span>{t("analysis.observedResult")}</span><strong>{translatedClassName(item.actual_class_name)}</strong></div>
                         <div>
-                          <span>Entry → exit</span>
-                          <strong>{item.entry_date ? formatDate(item.entry_date) : "Pending"} → {item.exit_date ? formatDate(item.exit_date) : "Pending"}</strong>
-                          <small>{item.entry_price !== null ? formatMoney(item.entry_price, dailyAnalysis.currency) : "Pending price"} → {item.exit_price !== null ? formatMoney(item.exit_price, dailyAnalysis.currency) : "Pending price"}</small>
+                          <span>{t("analysis.entryExit")}</span>
+                          <strong>{item.entry_date ? formatDate(item.entry_date, locale) : t("common.pending")} → {item.exit_date ? formatDate(item.exit_date, locale) : t("common.pending")}</strong>
+                          <small>{item.entry_price !== null ? formatMoney(item.entry_price, dailyAnalysis.currency, locale) : t("analysis.pendingPrice")} → {item.exit_price !== null ? formatMoney(item.exit_price, dailyAnalysis.currency, locale) : t("analysis.pendingPrice")}</small>
                         </div>
-                        <div><span>Observed return</span><strong>{item.observed_return === null ? "Pending" : formatPercentage(item.observed_return)}</strong></div>
+                        <div><span>{t("analysis.observedReturn")}</span><strong>{item.observed_return === null ? t("common.pending") : formatPercentage(item.observed_return, locale)}</strong></div>
                       </div>
                       <p className="analysis-description">{item.description}</p>
                     </article>
@@ -821,33 +830,40 @@ export default function Home() {
           {!isLoading && backtestResult && (
             <section className="history-results">
               <div className="history-summary">
-                <div><span>Final strategy capital</span><strong>{formatMoney(backtestResult.metrics.final_strategy_capital, backtestResult.currency)}</strong></div>
-                <div><span>Final buy-and-hold capital</span><strong>{formatMoney(backtestResult.metrics.final_buy_hold_capital, backtestResult.currency)}</strong></div>
-                <div><span>Strategy return</span><strong>{formatPercentage(backtestResult.metrics.total_strategy_return)}</strong></div>
-                <div><span>Buy-and-hold return</span><strong>{formatPercentage(backtestResult.metrics.total_buy_hold_return)}</strong></div>
+                <div><span>{t("backtest.finalStrategyCapital")}</span><strong>{formatMoney(backtestResult.metrics.final_strategy_capital, backtestResult.currency, locale)}</strong></div>
+                <div><span>{t("backtest.finalBuyHoldCapital")}</span><strong>{formatMoney(backtestResult.metrics.final_buy_hold_capital, backtestResult.currency, locale)}</strong></div>
+                <div><span>{t("backtest.strategyReturn")}</span><strong>{formatPercentage(backtestResult.metrics.total_strategy_return, locale)}</strong></div>
+                <div><span>{t("backtest.buyHoldReturn")}</span><strong>{formatPercentage(backtestResult.metrics.total_buy_hold_return, locale)}</strong></div>
               </div>
               <div className="backtest-risk-grid">
-                <div><span>CAGR</span><strong>{formatPercentage(backtestResult.metrics.strategy_cagr)}</strong></div>
-                <div><span>Approximate Sharpe</span><strong>{backtestResult.metrics.approximate_sharpe === null ? "—" : backtestResult.metrics.approximate_sharpe.toFixed(3)}</strong></div>
-                <div><span>Approximate Sortino</span><strong>{backtestResult.metrics.approximate_sortino === null ? "—" : backtestResult.metrics.approximate_sortino.toFixed(3)}</strong></div>
-                <div><span>Maximum drawdown</span><strong>{formatPercentage(backtestResult.metrics.max_close_drawdown)}</strong></div>
-                <div><span>Exposure</span><strong>{formatPercentage(backtestResult.metrics.exposure_ratio)}</strong></div>
-                <div><span>Executed trades</span><strong>{backtestResult.metrics.executed_trades}</strong></div>
-                <div><span>Win rate</span><strong>{backtestResult.metrics.trade_win_rate === null ? "—" : formatPercentage(backtestResult.metrics.trade_win_rate)}</strong></div>
-                <div><span>Retrainings</span><strong>{backtestResult.total_retrainings}</strong></div>
+                <div><span>{t("common.cagr")}</span><strong>{formatPercentage(backtestResult.metrics.strategy_cagr, locale)}</strong></div>
+                <div><span>{t("backtest.approximateSharpe")}</span><strong>{backtestResult.metrics.approximate_sharpe === null ? "—" : backtestResult.metrics.approximate_sharpe.toFixed(3)}</strong></div>
+                <div><span>{t("backtest.approximateSortino")}</span><strong>{backtestResult.metrics.approximate_sortino === null ? "—" : backtestResult.metrics.approximate_sortino.toFixed(3)}</strong></div>
+                <div><span>{t("backtest.maximumDrawdown")}</span><strong>{formatPercentage(backtestResult.metrics.max_close_drawdown, locale)}</strong></div>
+                <div><span>{t("backtest.exposure")}</span><strong>{formatPercentage(backtestResult.metrics.exposure_ratio, locale)}</strong></div>
+                <div><span>{t("backtest.executedTrades")}</span><strong>{backtestResult.metrics.executed_trades}</strong></div>
+                <div><span>{t("backtest.winRate")}</span><strong>{backtestResult.metrics.trade_win_rate === null ? "—" : formatPercentage(backtestResult.metrics.trade_win_rate, locale)}</strong></div>
+                <div><span>{t("backtest.retrainings")}</span><strong>{backtestResult.total_retrainings}</strong></div>
               </div>
               <p className="backtest-period-note">
-                Model used: {modelName(backtestResult.model_used)} · requested period: {formatDate(backtestResult.start_date)} to {formatDate(backtestResult.end_date)} · first signal on {formatDate(backtestResult.first_signal)} · last exit on {formatDate(backtestResult.last_exit)} · {backtestResult.horizon_trading_days}-session horizon.
+                {t("backtest.periodNote", {
+                  model: translatedModelName(backtestResult.model_used),
+                  start: formatDate(backtestResult.start_date, locale),
+                  end: formatDate(backtestResult.end_date, locale),
+                  firstSignal: formatDate(backtestResult.first_signal, locale),
+                  lastExit: formatDate(backtestResult.last_exit, locale),
+                  horizon: backtestResult.horizon_trading_days,
+                })}
               </p>
               <div className="history-list">
                 {backtestResult.trades.map((item, index) => {
-                  const actionLabel = item.action === "BUY" ? "BUY" : item.action === "SELL_SHORT" ? "SELL / SHORT" : "STAY OUT";
+                  const actionLabel = translatedAction(item.action);
                   const resultState = item.strategy_return > 0 ? "correct" : item.strategy_return < 0 ? "error" : "pending";
                   return <article className="history-card" key={`${item.signal_date}-${index}`}>
-                    <header><div><span>Analyzed close</span><h3>{formatDate(item.signal_date)}</h3></div><div className="history-badges"><span className={`daily-action ${actionClass(item.action)}`}>{actionLabel}</span><span className={`result-badge ${resultState}`}>{formatPercentage(item.strategy_return)}</span></div></header>
-                    <div className="history-comparison"><div><span>Entry</span><strong>{formatMoney(item.entry_price, backtestResult.currency)}</strong><small>{formatDate(item.entry_date)}</small></div><div><span>Exit</span><strong>{formatMoney(item.exit_price, backtestResult.currency)}</strong><small>{formatDate(item.exit_date)}</small></div></div>
-                    <div className="history-probabilities"><span>Down <strong>{formatPercentage(item.probability_down)}</strong></span><span>Neutral <strong>{formatPercentage(item.probability_neutral)}</strong></span><span>Up <strong>{formatPercentage(item.probability_up)}</strong></span></div>
-                    <div className="backtest-operation-result"><div><span>Asset return</span><strong>{formatPercentage(item.asset_return)}</strong></div><div><span>Strategy capital</span><strong>{formatMoney(item.strategy_capital, backtestResult.currency)}</strong></div><div><span>Buy-and-hold capital</span><strong>{formatMoney(item.buy_hold_capital, backtestResult.currency)}</strong></div></div>
+                    <header><div><span>{t("backtest.analyzedClose")}</span><h3>{formatDate(item.signal_date, locale)}</h3></div><div className="history-badges"><span className={`daily-action ${actionClass(item.action)}`}>{actionLabel}</span><span className={`result-badge ${resultState}`}>{formatPercentage(item.strategy_return, locale)}</span></div></header>
+                    <div className="history-comparison"><div><span>{t("backtest.entry")}</span><strong>{formatMoney(item.entry_price, backtestResult.currency, locale)}</strong><small>{formatDate(item.entry_date, locale)}</small></div><div><span>{t("backtest.exit")}</span><strong>{formatMoney(item.exit_price, backtestResult.currency, locale)}</strong><small>{formatDate(item.exit_date, locale)}</small></div></div>
+                    <div className="history-probabilities"><span>{t("common.down")} <strong>{formatPercentage(item.probability_down, locale)}</strong></span><span>{t("common.neutral")} <strong>{formatPercentage(item.probability_neutral, locale)}</strong></span><span>{t("common.up")} <strong>{formatPercentage(item.probability_up, locale)}</strong></span></div>
+                    <div className="backtest-operation-result"><div><span>{t("backtest.assetReturn")}</span><strong>{formatPercentage(item.asset_return, locale)}</strong></div><div><span>{t("backtest.strategyCapital")}</span><strong>{formatMoney(item.strategy_capital, backtestResult.currency, locale)}</strong></div><div><span>{t("backtest.buyHoldCapital")}</span><strong>{formatMoney(item.buy_hold_capital, backtestResult.currency, locale)}</strong></div></div>
                   </article>;
                 })}
               </div>

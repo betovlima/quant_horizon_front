@@ -7,8 +7,12 @@ export function localIsoDate(dayOffset = 0) {
   return `${year}-${month}-${day}`;
 }
 
-export function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
+export function languageToLocale(language: string | undefined) {
+  return language?.toLowerCase().startsWith("pt") ? "pt-BR" : "en-US";
+}
+
+export function formatDate(value: string, locale = "en-US") {
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "2-digit",
     year: "numeric",
@@ -16,8 +20,8 @@ export function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-export function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat("en-US", {
+export function formatShortDate(value: string, locale = "en-US") {
+  return new Intl.DateTimeFormat(locale, {
     weekday: "short",
     month: "short",
     day: "2-digit",
@@ -25,19 +29,36 @@ export function formatShortDate(value: string) {
   }).format(new Date(value));
 }
 
-export function formatPercentage(value: number) {
-  return new Intl.NumberFormat("en-US", {
+export function formatPercentage(value: number, locale = "en-US") {
+  return new Intl.NumberFormat(locale, {
     style: "percent",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
 }
 
-export function formatMoney(value: number, currency: string) {
-  return `${currency} ${new Intl.NumberFormat("en-US", {
+export function formatMoney(value: number, currency: string, locale = "en-US") {
+  const normalizedCurrency = currency.trim().toUpperCase();
+
+  if (normalizedCurrency) {
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: normalizedCurrency,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(value);
+    } catch {
+      // Fall back to the API-provided currency text when it is not an ISO code.
+    }
+  }
+
+  const formattedValue = new Intl.NumberFormat(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value)}`;
+  }).format(value);
+
+  return normalizedCurrency ? `${normalizedCurrency} ${formattedValue}` : formattedValue;
 }
 
 export function formatClassName(name: string | null) {

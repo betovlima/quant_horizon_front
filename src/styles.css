@@ -56,8 +56,35 @@ button, input, select { font: inherit; }
 
 .topbar-title { font-size: 18px; font-weight: 650; }
 
-.read-only {
+.language-switcher {
+  display: inline-flex;
   margin-left: auto;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #111a24;
+}
+
+.language-button {
+  min-width: 36px;
+  height: 28px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .06em;
+}
+
+.language-button:hover { color: var(--text); }
+.language-button.active { background: var(--gold); color: #17120a; }
+.language-button:focus-visible { outline: 2px solid rgba(228,173,72,.45); outline-offset: 2px; }
+
+.read-only {
+  margin-left: 0;
   padding: 7px 11px;
   border: 1px solid #2a3c4c;
   border-radius: 999px;

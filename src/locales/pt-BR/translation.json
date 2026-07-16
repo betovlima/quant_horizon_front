@@ -1,0 +1,220 @@
+{
+  "language": {
+    "selector": "Seletor de idioma",
+    "english": "Inglês",
+    "portuguese": "Português"
+  },
+  "app": {
+    "subtitle": "Previsões de mercado e backtests",
+    "readOnly": "Nenhuma ordem é enviada",
+    "assetResearch": "Análise de ativos"
+  },
+  "sidebar": {
+    "titles": {
+      "signals": "Planeje cada sessão",
+      "analysis": "Revise dia a dia",
+      "backtest": "Meça a estratégia"
+    },
+    "copies": {
+      "signals": "Uma previsão por dia, sempre baseada no fechamento anterior.",
+      "analysis": "Compare o passado e projete o futuro sem pular sessões.",
+      "backtest": "Simule capital e operações sem usar informações futuras."
+    }
+  },
+  "form": {
+    "question": "O que você deseja analisar?",
+    "analysisType": "Tipo de análise",
+    "modes": {
+      "signals": "Próximos sinais",
+      "analysis": "Análise por sessão",
+      "backtest": "Backtest financeiro"
+    },
+    "ticker": "Ativo (ticker)",
+    "model": "Modelo de análise",
+    "startDate": "Data inicial",
+    "endDate": "Data final",
+    "analysisHorizon": "Resultado depois de quantas sessões?",
+    "initialCapital": "Capital inicial",
+    "backtestHorizon": "Horizonte (sessões de negociação)",
+    "help": {
+      "signals": "As sessões futuras recebem previsões preliminares e são recalculadas após cada novo fechamento.",
+      "analysis": "O passado mostra um sinal por sessão. O futuro usa o último fechamento disponível e permanece pendente.",
+      "backtest": "O modelo é retreinado periodicamente e reinveste todo o capital após cada operação sem sobreposição."
+    },
+    "apiConnection": "Conexão com a API",
+    "apiAddress": "Endereço da API",
+    "apiKey": "Chave da API (opcional)",
+    "analyzing": "Analisando…",
+    "generateSignals": "Gerar próximos sinais",
+    "analyzeSessions": "Analisar todas as sessões",
+    "runBacktest": "Executar backtest",
+    "disclaimer": "As aceitações são registros simulados. Nenhuma ordem é enviada a uma corretora."
+  },
+  "content": {
+    "eyebrow": "Modelo {{model}} · sem dados futuros no treinamento",
+    "headings": {
+      "signals": "Agenda diária de sinais",
+      "analysis": "Análise diária do período",
+      "backtest": "Resultados do backtest"
+    }
+  },
+  "errors": {
+    "unableToComplete": "Não foi possível concluir",
+    "tickerAndDates": "Informe um ativo e o intervalo de datas.",
+    "invalidApiAddress": "O endereço da API deve começar com http:// ou https://.",
+    "horizonWhole": "O horizonte deve ser um número inteiro de sessões de negociação.",
+    "initialCapital": "Informe um capital inicial maior que zero.",
+    "dailySignals": "Não foi possível gerar os sinais diários.",
+    "analysisUnsupported": "Sua API local não oferece análise sessão por sessão. Atualize para o backend 2.0.0 e reinicie o Uvicorn.",
+    "dailyAnalysis": "Não foi possível executar a análise diária.",
+    "backtest": "Não foi possível executar o backtest.",
+    "recordAcceptance": "Não foi possível registrar a aceitação.",
+    "resetAcceptances": "Não foi possível redefinir as aceitações.",
+    "modelUnsupported": "Sua API local não aceita a seleção de modelo. Atualize para o backend 2.0.0 e reinicie o Uvicorn.",
+    "apiStatus": "A API respondeu com o status {{status}}."
+  },
+  "loading": {
+    "title": "Calculando sinais",
+    "copy": "O modelo usa somente as informações conhecidas em cada fechamento."
+  },
+  "position": {
+    "title": "Posição simulada",
+    "long": "COMPRADO",
+    "none": "SEM POSIÇÃO",
+    "acceptanceRecorded": "Aceitação registrada em {{date}}",
+    "recordGuidance": "Registre uma aceitação somente depois de decidir agir sobre um sinal.",
+    "howToRecord": "Como registrar",
+    "howToRecordCopy": "Use o botão no cartão da sessão selecionada. A data e o preço de referência serão aplicados automaticamente.",
+    "resetting": "Redefinindo…",
+    "reset": "Redefinir compras e vendas",
+    "resetConfirm": "Excluir todas as compras e vendas simuladas de {{ticker}}?"
+  },
+  "compatibility": {
+    "title": "API local desatualizada",
+    "beforeCode": "A resposta não contém previsões para múltiplos horizontes. Atualize",
+    "afterCode": "para o backend 2.0.0 e reinicie o Uvicorn."
+  },
+  "summary": {
+    "sessionsInRange": "Sessões no período",
+    "availableSignals": "Sinais disponíveis",
+    "preliminaryForecasts": "Previsões preliminares",
+    "apiCalendar": "API / calendário"
+  },
+  "daily": {
+    "forecastSessionsAria": "Sessões previstas no período",
+    "rangeForecasts": "Previsões do período",
+    "analyzedSession": "Sessão analisada",
+    "analysisBasis": "Base da análise",
+    "closeOn": "Fechamento em {{date}}",
+    "positionBefore": "Posição antes do sinal",
+    "referencePrice": "Preço de referência",
+    "recordedAcceptance": "Aceitação registrada: {{tradeType}} em {{date}}.",
+    "saveReference": "{{date}} e seu preço de referência serão salvos no banco de dados local.",
+    "saving": "Salvando…",
+    "acceptSell": "Aceitei a venda nesta data",
+    "acceptBuy": "Aceitei a compra nesta data",
+    "projection_one": "Projeção de {{count}} sessão",
+    "projection_other": "Projeção de {{count}} sessões"
+  },
+  "analysis": {
+    "analyzedSessions": "Sessões analisadas",
+    "evaluatedResults": "Resultados avaliados",
+    "futureForecasts": "Previsões futuras",
+    "accuracyRate": "Taxa de acerto",
+    "marketDaysRemoved": "{{count}} dias sem negociação foram removidos. Cada sessão válida no período possui um cartão.",
+    "periodNote": "Último fechamento: {{latestClose}} · resultados históricos após {{historicalHorizon}} sessões · retreinamento a cada {{frequency}} sessões · API v{{version}}.",
+    "replayedClose": "Fechamento reproduzido",
+    "projectedSession": "Sessão projetada",
+    "analysisBasis": "Base da análise",
+    "latestKnownClose": "Último fechamento conhecido",
+    "dataAvailable": "Dados disponíveis naquela data",
+    "referencePrice": "Preço de referência",
+    "horizonUsed": "Horizonte utilizado",
+    "predictedClass": "Classe prevista",
+    "observedResult": "Resultado observado",
+    "entryExit": "Entrada → saída",
+    "pendingPrice": "Preço pendente",
+    "observedReturn": "Retorno observado",
+    "trainingSamples_one": "{{count}} amostra de treinamento",
+    "trainingSamples_other": "{{count}} amostras de treinamento"
+  },
+  "backtest": {
+    "finalStrategyCapital": "Capital final da estratégia",
+    "finalBuyHoldCapital": "Capital final de comprar e manter",
+    "strategyReturn": "Retorno da estratégia",
+    "buyHoldReturn": "Retorno de comprar e manter",
+    "approximateSharpe": "Sharpe aproximado",
+    "approximateSortino": "Sortino aproximado",
+    "maximumDrawdown": "Drawdown máximo",
+    "exposure": "Exposição",
+    "executedTrades": "Operações executadas",
+    "winRate": "Taxa de acerto",
+    "retrainings": "Retreinamentos",
+    "periodNote": "Modelo utilizado: {{model}} · período solicitado: {{start}} a {{end}} · primeiro sinal em {{firstSignal}} · última saída em {{lastExit}} · horizonte de {{horizon}} sessões.",
+    "analyzedClose": "Fechamento analisado",
+    "entry": "Entrada",
+    "exit": "Saída",
+    "assetReturn": "Retorno do ativo",
+    "strategyCapital": "Capital da estratégia",
+    "buyHoldCapital": "Capital de comprar e manter"
+  },
+  "common": {
+    "pending": "Pendente",
+    "session": "sessão",
+    "sessions": "sessões",
+    "down": "Baixa",
+    "neutral": "Neutro",
+    "up": "Alta",
+    "threshold": "Limite",
+    "cagr": "CAGR"
+  },
+  "results": {
+    "correct": "CORRETO",
+    "divergence": "DIVERGÊNCIA",
+    "pending": "PENDENTE"
+  },
+  "positions": {
+    "long": "Comprado",
+    "no_position": "Sem posição"
+  },
+  "projectionTypes": {
+    "updated": "ATUALIZADA",
+    "preliminary": "PRELIMINAR",
+    "historical": "HISTÓRICA"
+  },
+  "actions": {
+    "labels": {
+      "buy": "COMPRAR",
+      "sell": "VENDER",
+      "wait": "AGUARDAR",
+      "hold": "MANTER",
+      "waiting_for_data": "AGUARDANDO DADOS",
+      "sell_short": "VENDER / SHORT",
+      "stay_out": "FICAR DE FORA"
+    }
+  },
+  "classes": {
+    "down": "Baixa",
+    "neutral": "Neutro",
+    "up": "Alta",
+    "pending": "Pendente"
+  },
+  "models": {
+    "names": {
+      "lightgbm": "LightGBM",
+      "catboost": "CatBoost",
+      "xgboost": "XGBoost",
+      "logistic": "Regressão Logística",
+      "random_forest": "Random Forest",
+      "ensemble": "Ensemble"
+    },
+    "descriptions": {
+      "lightgbm": "Modelo padrão rápido e regularizado.",
+      "catboost": "Gradient boosting com treinamento ordenado.",
+      "xgboost": "Gradient boosting com regularização alternativa.",
+      "logistic": "Baseline linear simples e interpretável.",
+      "random_forest": "Conjunto de árvores de decisão com amostragem aleatória.",
+      "ensemble": "Média das probabilidades dos três modelos de boosting."
+    }
+  }
+}
