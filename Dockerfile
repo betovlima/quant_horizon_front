@@ -9,9 +9,12 @@ ENV NPM_CONFIG_AUDIT=false
 ENV NPM_CONFIG_FUND=false
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 
-RUN npm ci --no-audit --no-fund
+RUN npm ci \
+    --registry=https://registry.npmjs.org/ \
+    --no-audit \
+    --no-fund
 
 COPY . .
 
