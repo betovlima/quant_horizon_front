@@ -1,20 +1,19 @@
 {
     auto_https off
-
-    servers {
-        trusted_proxies static private_ranges 100.0.0.0/8
-    }
+    admin off
 }
 
-:{$PORT} {
+:{$PORT:5173} {
     root * /srv
 
-    encode gzip
+    encode zstd gzip
 
-    @health path /health
-    respond @health "OK" 200
+    handle /health {
+        respond "OK" 200
+    }
 
-    try_files {path} /index.html
-
-    file_server
+    handle {
+        try_files {path} /index.html
+        file_server
+    }
 }
