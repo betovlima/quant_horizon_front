@@ -212,5 +212,15 @@
       "random_forest": "Conjunto de árvores de decisão com amostragem aleatória.",
       "ensemble": "Média das probabilidades dos três modelos de boosting."
     }
+  },
+  "apiErrors": {
+    "INVALID_BACKTEST_DATE_RANGE": "A data inicial deve ser anterior à data final.",
+    "INVALID_BACKTEST_HORIZON": "O horizonte da previsão deve conter pelo menos uma sessão de negociação.",
+    "BACKTEST_START_DATE_IN_FUTURE": "A data inicial do backtest não pode estar no futuro.",
+    "BACKTEST_END_DATE_IN_FUTURE": "A data final do backtest não pode estar no futuro.",
+    "BACKTEST_RANGE_TOO_LONG": "O período do backtest não pode ultrapassar {{maximum_years}} anos.",
+    "BACKTEST_NO_MARKET_DATA": "Não foram encontrados dados de mercado para o período selecionado.",
+    "BACKTEST_NO_TRADING_SESSIONS": "O período selecionado não contém sessões de negociação.",
+    "BACKTEST_INSUFFICIENT_TRADING_SESSIONS": "O período contém apenas {{available_trading_sessions}} sessões de negociação, mas são necessárias pelo menos {{required_trading_sessions}} para o horizonte selecionado."
   }
 }
