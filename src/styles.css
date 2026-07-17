@@ -129,8 +129,7 @@ button, input, select { font: inherit; }
 
 .ticker-field input,
 .model-field select,
-.field-group input,
-.connection-fields input {
+.field-group input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -141,7 +140,7 @@ button, input, select { font: inherit; }
 }
 
 .ticker-field input { height: 52px; padding: 0 16px 0 44px; font-size: 17px; font-weight: 600; letter-spacing: .04em; }
-.ticker-field input:focus, .model-field select:focus, .field-group input:focus, .connection-fields input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(228, 173, 72, .13); }
+.ticker-field input:focus, .model-field select:focus, .field-group input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(228, 173, 72, .13); }
 .field-help { margin: 8px 0 0; color: #708397; font-size: 12px; }
 
 .model-field { display: flex; flex-direction: column; margin-top: 22px; }
@@ -158,12 +157,8 @@ button, input, select { font: inherit; }
 .future-help strong { color: var(--gold); font-size: 12px; }
 .future-help span { color: var(--muted); font-size: 11px; line-height: 1.5; }
 
-.connection { margin: 20px 0 22px; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
-.connection summary { padding: 14px 0; color: var(--muted); cursor: pointer; font-size: 13px; }
-.connection summary:hover { color: var(--text); }
-.connection-fields { display: flex; flex-direction: column; padding: 2px 0 16px; }
-.connection-fields label { margin-top: 12px; }
-.connection-fields input { height: 43px; padding: 0 12px; color: #dce5ef; font-size: 13px; }
+
+.form > button[type="submit"] { margin-top: 22px; }
 
 .form button {
   min-height: 52px;
