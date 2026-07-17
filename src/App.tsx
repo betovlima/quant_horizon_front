@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { createBacktestPayload } from "./lib/backtest";
 import { createDailyAnalysisPayload } from "./lib/daily-analysis";
+import { API_BASE_URL, JSON_HEADERS } from "./lib/api";
 import {
   isInvestmentModel,
   INVESTMENT_MODELS,
@@ -177,8 +178,6 @@ type PeriodBacktestResponse = {
   trades: BacktestTrade[];
 };
 
-const ENV_API_URL = import.meta.env.VITE_API_URL?.trim();
-const DEFAULT_API_URL = ENV_API_URL || "http://127.0.0.1:8000";
 
 function errorMessage(data: unknown, status: number, t: TFunction) {
   if (data && typeof data === "object" && "detail" in data) {
@@ -204,11 +203,6 @@ function errorMessage(data: unknown, status: number, t: TFunction) {
   return t("errors.apiStatus", { status });
 }
 
-function requestHeaders(key: string) {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (key.trim()) headers["X-API-Key"] = key.trim();
-  return headers;
-}
 
 export default function Home() {
   const { t, i18n } = useTranslation();
@@ -234,8 +228,6 @@ export default function Home() {
   const [queryMode, setQueryMode] = useState<QueryMode>("signals");
   const [startDate, setStartDate] = useState(() => localIsoDate(1));
   const [endDate, setEndDate] = useState(() => localIsoDate(7));
-  const [apiUrl, setApiUrl] = useState(DEFAULT_API_URL);
-  const [apiKey, setApiKey] = useState("");
   const [dailyForecasts, setDailyForecasts] = useState<DailyForecastResponse | null>(null);
   const [dailyAnalysis, setDailyAnalysis] = useState<DailyAnalysisResponse | null>(null);
   const [backtestResult, setBacktestResult] = useState<PeriodBacktestResponse | null>(null);
@@ -260,13 +252,10 @@ export default function Home() {
 
   const fetchPosition = useCallback(async (
     providedTicker: string,
-    providedUrl: string,
-    providedKey: string,
   ) => {
-    const baseUrl = providedUrl.trim().replace(/\/$/, "");
     const normalizedTicker = providedTicker.trim().toUpperCase();
-    const response = await fetch(`${baseUrl}/v1/positions/${encodeURIComponent(normalizedTicker)}`, {
-      headers: requestHeaders(providedKey),
+    const response = await fetch(`${API_BASE_URL}/v1/positions/${encodeURIComponent(normalizedTicker)}`, {
+      headers: JSON_HEADERS,
     });
     const data = (await response.json().catch(() => null)) as unknown;
     if (!response.ok) throw new Error(errorMessage(data, response.status, t));
@@ -279,14 +268,10 @@ export default function Home() {
     providedTicker: string,
     start: string,
     end: string,
-    providedUrl: string,
-    providedKey: string,
     providedModel: InvestmentModel,
   ) => {
     const normalizedTicker = providedTicker.trim().toUpperCase();
-    const baseUrl = providedUrl.trim().replace(/\/$/, "");
     if (!normalizedTicker || !start || !end) throw new Error(t("errors.tickerAndDates"));
-    if (!/^https?:\/\//i.test(baseUrl)) throw new Error(t("errors.invalidApiAddress"));
 
     setIsLoading(true);
     setError("");
@@ -294,13 +279,12 @@ export default function Home() {
     setDailyAnalysis(null);
     setBacktestResult(null);
     setTicker(normalizedTicker);
-    window.localStorage.setItem("quant-horizon-api-url", baseUrl);
     window.localStorage.setItem("quant-horizon-model", providedModel);
 
     try {
-      const response = await fetch(`${baseUrl}/v1/forecasts/daily`, {
+      const response = await fetch(`${API_BASE_URL}/v1/forecasts/daily`, {
         method: "POST",
-        headers: requestHeaders(providedKey),
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           ticker: normalizedTicker,
           model: providedModel,
@@ -311,7 +295,7 @@ export default function Home() {
       const data = (await response.json().catch(() => null)) as unknown;
       if (!response.ok) throw new Error(errorMessage(data, response.status, t));
       setDailyForecasts(data as DailyForecastResponse);
-      await fetchPosition(normalizedTicker, baseUrl, providedKey);
+      await fetchPosition(normalizedTicker);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : t("errors.dailySignals"));
     } finally {
@@ -322,34 +306,25 @@ export default function Home() {
   useEffect(() => {
     if (initialQueryCompleted.current) return;
     initialQueryCompleted.current = true;
-    const savedUrl = ENV_API_URL
-      || window.localStorage.getItem("quant-horizon-api-url")
-      || DEFAULT_API_URL;
+    window.localStorage.removeItem("quant-horizon-api-url");
     const savedModel = window.localStorage.getItem("quant-horizon-model");
     const initialModel = isInvestmentModel(savedModel) ? savedModel : "lightgbm";
-    setApiUrl(savedUrl);
     setModel(initialModel);
-    void fetchDailyForecasts("AAPL", startDate, endDate, savedUrl, "", initialModel);
+    void fetchDailyForecasts("AAPL", startDate, endDate, initialModel);
   }, [fetchDailyForecasts, endDate, startDate]);
 
   async function submitQuery(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (queryMode === "signals") {
-      await fetchDailyForecasts(ticker, startDate, endDate, apiUrl, apiKey, model);
+      await fetchDailyForecasts(ticker, startDate, endDate, model);
       return;
     }
 
     const normalizedTicker = ticker.trim().toUpperCase();
-    const baseUrl = apiUrl.trim().replace(/\/$/, "");
     if (!normalizedTicker || !startDate || !endDate) {
       setError(t("errors.tickerAndDates"));
       return;
     }
-    if (!/^https?:\/\//i.test(baseUrl)) {
-      setError(t("errors.invalidApiAddress"));
-      return;
-    }
-
     if (queryMode === "analysis") {
       if (!Number.isInteger(Number(analysisHorizon)) || Number(analysisHorizon) < 1) {
         setError(t("errors.horizonWhole"));
@@ -360,12 +335,11 @@ export default function Home() {
       setDailyForecasts(null);
       setDailyAnalysis(null);
       setBacktestResult(null);
-      window.localStorage.setItem("quant-horizon-api-url", baseUrl);
       window.localStorage.setItem("quant-horizon-model", model);
       try {
-        const response = await fetch(`${baseUrl}/v1/analyses/daily`, {
+        const response = await fetch(`${API_BASE_URL}/v1/analyses/daily`, {
           method: "POST",
-          headers: requestHeaders(apiKey),
+          headers: JSON_HEADERS,
           body: JSON.stringify(createDailyAnalysisPayload(
             normalizedTicker,
             model,
@@ -402,12 +376,11 @@ export default function Home() {
     setDailyForecasts(null);
     setDailyAnalysis(null);
     setBacktestResult(null);
-    window.localStorage.setItem("quant-horizon-api-url", baseUrl);
     window.localStorage.setItem("quant-horizon-model", model);
     try {
-      const response = await fetch(`${baseUrl}/v1/backtests/period`, {
+      const response = await fetch(`${API_BASE_URL}/v1/backtests/period`, {
         method: "POST",
-        headers: requestHeaders(apiKey),
+        headers: JSON_HEADERS,
         body: JSON.stringify(createBacktestPayload(
           normalizedTicker,
           startDate,
@@ -429,16 +402,15 @@ export default function Home() {
 
   async function registerAcceptance(item: DailyForecastItem) {
     const normalizedTicker = ticker.trim().toUpperCase();
-    const baseUrl = apiUrl.trim().replace(/\/$/, "");
     const tradeType = item.position_before === "LONG" ? "SELL" : "BUY";
     setAcceptanceInProgress(item.target_date);
     setError("");
     try {
       const response = await fetch(
-        `${baseUrl}/v1/positions/${encodeURIComponent(normalizedTicker)}/acceptances`,
+        `${API_BASE_URL}/v1/positions/${encodeURIComponent(normalizedTicker)}/acceptances`,
         {
           method: "POST",
-          headers: requestHeaders(apiKey),
+          headers: JSON_HEADERS,
           body: JSON.stringify({
             trade_type: tradeType,
             acceptance_date: item.target_date,
@@ -449,7 +421,7 @@ export default function Home() {
       const data = (await response.json().catch(() => null)) as unknown;
       if (!response.ok) throw new Error(errorMessage(data, response.status, t));
       setPositionState(data as PositionState);
-      await fetchDailyForecasts(normalizedTicker, startDate, endDate, baseUrl, apiKey, model);
+      await fetchDailyForecasts(normalizedTicker, startDate, endDate, model);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : t("errors.recordAcceptance"));
     } finally {
@@ -461,18 +433,17 @@ export default function Home() {
     const normalizedTicker = ticker.trim().toUpperCase();
     if (!window.confirm(t("position.resetConfirm", { ticker: normalizedTicker }))) return;
 
-    const baseUrl = apiUrl.trim().replace(/\/$/, "");
     setIsResettingAcceptances(true);
     setError("");
     try {
       const response = await fetch(
-        `${baseUrl}/v1/positions/${encodeURIComponent(normalizedTicker)}/acceptances`,
-        { method: "DELETE", headers: requestHeaders(apiKey) },
+        `${API_BASE_URL}/v1/positions/${encodeURIComponent(normalizedTicker)}/acceptances`,
+        { method: "DELETE", headers: JSON_HEADERS },
       );
       const data = (await response.json().catch(() => null)) as unknown;
       if (!response.ok) throw new Error(errorMessage(data, response.status, t));
       setPositionState(data as PositionState);
-      await fetchDailyForecasts(normalizedTicker, startDate, endDate, baseUrl, apiKey, model);
+      await fetchDailyForecasts(normalizedTicker, startDate, endDate, model);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : t("errors.resetAcceptances"));
     } finally {
@@ -601,15 +572,6 @@ export default function Home() {
               {t(`form.help.${queryMode}`)}
             </p>
 
-            <details className="connection">
-              <summary>{t("form.apiConnection")}</summary>
-              <div className="connection-fields">
-                <label htmlFor="api-url">{t("form.apiAddress")}</label>
-                <input id="api-url" value={apiUrl} onChange={(e) => setApiUrl(e.target.value)} inputMode="url" />
-                <label htmlFor="api-key">{t("form.apiKey")}</label>
-                <input id="api-key" value={apiKey} onChange={(e) => setApiKey(e.target.value)} type="password" autoComplete="off" />
-              </div>
-            </details>
 
             <button type="submit" disabled={isLoading}>
               {isLoading
