@@ -1,10 +1,9 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./components/LanguageSwitcher";
 import { createBacktestPayload } from "./lib/backtest";
 import { createDailyAnalysisPayload } from "./lib/daily-analysis";
-import { API_BASE_URL, JSON_HEADERS } from "./lib/api";
+import { API_BASE_URL, JSON_HEADERS, apiErrorMessage } from "./lib/api";
 import {
   isInvestmentModel,
   INVESTMENT_MODELS,
@@ -13,6 +12,7 @@ import {
 } from "./lib/models";
 import {
   actionClass,
+  futureWeekdayIsoDate,
   localIsoDate,
   formatDate,
   formatShortDate,
@@ -179,30 +179,6 @@ type PeriodBacktestResponse = {
 };
 
 
-function errorMessage(data: unknown, status: number, t: TFunction) {
-  if (data && typeof data === "object" && "detail" in data) {
-    const detail = (data as { detail: unknown }).detail;
-    if (typeof detail === "string") return detail;
-    if (Array.isArray(detail)) {
-      const messages = detail
-        .map((item) => {
-          if (!item || typeof item !== "object") return null;
-          const message = "msg" in item && typeof item.msg === "string" ? item.msg : null;
-          const location = "loc" in item && Array.isArray(item.loc)
-            ? item.loc.filter((part: unknown) => part !== "body").join(".")
-            : "";
-          if (location === "model" && message?.toLowerCase().includes("extra")) {
-            return t("errors.modelUnsupported");
-          }
-          return message ? `${location ? `${location}: ` : ""}${message}` : null;
-        })
-        .filter(Boolean);
-      if (messages.length > 0) return messages.join(" ");
-    }
-  }
-  return t("errors.apiStatus", { status });
-}
-
 
 export default function Home() {
   const { t, i18n } = useTranslation();
@@ -226,8 +202,8 @@ export default function Home() {
   const [ticker, setTicker] = useState("AAPL");
   const [model, setModel] = useState<InvestmentModel>("lightgbm");
   const [queryMode, setQueryMode] = useState<QueryMode>("signals");
-  const [startDate, setStartDate] = useState(() => localIsoDate(1));
-  const [endDate, setEndDate] = useState(() => localIsoDate(7));
+  const [startDate, setStartDate] = useState(() => futureWeekdayIsoDate(1));
+  const [endDate, setEndDate] = useState(() => futureWeekdayIsoDate(5));
   const [dailyForecasts, setDailyForecasts] = useState<DailyForecastResponse | null>(null);
   const [dailyAnalysis, setDailyAnalysis] = useState<DailyAnalysisResponse | null>(null);
   const [backtestResult, setBacktestResult] = useState<PeriodBacktestResponse | null>(null);
@@ -258,7 +234,7 @@ export default function Home() {
       headers: JSON_HEADERS,
     });
     const data = (await response.json().catch(() => null)) as unknown;
-    if (!response.ok) throw new Error(errorMessage(data, response.status, t));
+    if (!response.ok) throw new Error(apiErrorMessage(data, response.status, t));
     const state = data as PositionState;
     setPositionState(state);
     return state;
@@ -293,7 +269,7 @@ export default function Home() {
         }),
       });
       const data = (await response.json().catch(() => null)) as unknown;
-      if (!response.ok) throw new Error(errorMessage(data, response.status, t));
+      if (!response.ok) throw new Error(apiErrorMessage(data, response.status, t));
       setDailyForecasts(data as DailyForecastResponse);
       await fetchPosition(normalizedTicker);
     } catch (failure) {
@@ -352,7 +328,7 @@ export default function Home() {
         if (response.status === 404) {
           throw new Error(t("errors.analysisUnsupported"));
         }
-        if (!response.ok) throw new Error(errorMessage(data, response.status, t));
+        if (!response.ok) throw new Error(apiErrorMessage(data, response.status, t));
         setDailyAnalysis(data as DailyAnalysisResponse);
       } catch (failure) {
         setError(failure instanceof Error ? failure.message : t("errors.dailyAnalysis"));
@@ -391,7 +367,7 @@ export default function Home() {
         )),
       });
       const data = (await response.json().catch(() => null)) as unknown;
-      if (!response.ok) throw new Error(errorMessage(data, response.status, t));
+      if (!response.ok) throw new Error(apiErrorMessage(data, response.status, t));
       setBacktestResult(data as PeriodBacktestResponse);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : t("errors.backtest"));
@@ -419,7 +395,7 @@ export default function Home() {
         },
       );
       const data = (await response.json().catch(() => null)) as unknown;
-      if (!response.ok) throw new Error(errorMessage(data, response.status, t));
+      if (!response.ok) throw new Error(apiErrorMessage(data, response.status, t));
       setPositionState(data as PositionState);
       await fetchDailyForecasts(normalizedTicker, startDate, endDate, model);
     } catch (failure) {
@@ -441,7 +417,7 @@ export default function Home() {
         { method: "DELETE", headers: JSON_HEADERS },
       );
       const data = (await response.json().catch(() => null)) as unknown;
-      if (!response.ok) throw new Error(errorMessage(data, response.status, t));
+      if (!response.ok) throw new Error(apiErrorMessage(data, response.status, t));
       setPositionState(data as PositionState);
       await fetchDailyForecasts(normalizedTicker, startDate, endDate, model);
     } catch (failure) {

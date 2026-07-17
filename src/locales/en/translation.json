@@ -212,5 +212,15 @@
       "random_forest": "An ensemble of randomly sampled decision trees.",
       "ensemble": "Average probabilities from the three boosting models."
     }
+  },
+  "apiErrors": {
+    "INVALID_BACKTEST_DATE_RANGE": "The start date must be earlier than the end date.",
+    "INVALID_BACKTEST_HORIZON": "The forecast horizon must contain at least one trading session.",
+    "BACKTEST_START_DATE_IN_FUTURE": "The backtest start date cannot be in the future.",
+    "BACKTEST_END_DATE_IN_FUTURE": "The backtest end date cannot be in the future.",
+    "BACKTEST_RANGE_TOO_LONG": "The backtest period cannot exceed {{maximum_years}} years.",
+    "BACKTEST_NO_MARKET_DATA": "No market data was found for the selected period.",
+    "BACKTEST_NO_TRADING_SESSIONS": "The selected period does not contain any trading sessions.",
+    "BACKTEST_INSUFFICIENT_TRADING_SESSIONS": "The period contains only {{available_trading_sessions}} trading sessions, but at least {{required_trading_sessions}} are required for the selected horizon."
   }
 }
