@@ -80,6 +80,8 @@ VITE_API_URL=https://quanthorizon-production.up.railway.app
 
 Vite injects `VITE_*` variables during the build. Redeploy the frontend after changing this value.
 
+The API address is not editable in the user interface. The application always uses `VITE_API_URL`, keeping deployment configuration outside the React form.
+
 ## Run locally
 
 ```bash

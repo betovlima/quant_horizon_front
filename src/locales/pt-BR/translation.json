@@ -41,9 +41,6 @@
       "analysis": "O passado mostra um sinal por sessão. O futuro usa o último fechamento disponível e permanece pendente.",
       "backtest": "O modelo é retreinado periodicamente e reinveste todo o capital após cada operação sem sobreposição."
     },
-    "apiConnection": "Conexão com a API",
-    "apiAddress": "Endereço da API",
-    "apiKey": "Chave da API (opcional)",
     "analyzing": "Analisando…",
     "generateSignals": "Gerar próximos sinais",
     "analyzeSessions": "Analisar todas as sessões",
@@ -61,7 +58,6 @@
   "errors": {
     "unableToComplete": "Não foi possível concluir",
     "tickerAndDates": "Informe um ativo e o intervalo de datas.",
-    "invalidApiAddress": "O endereço da API deve começar com http:// ou https://.",
     "horizonWhole": "O horizonte deve ser um número inteiro de sessões de negociação.",
     "initialCapital": "Informe um capital inicial maior que zero.",
     "dailySignals": "Não foi possível gerar os sinais diários.",
